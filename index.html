@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Club QR Maker</title>
+<title>QR Code Maker</title>
 <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 <script src="themes.js"></script>
 <style>
@@ -34,7 +34,8 @@
     background: var(--brand); color: #fff; padding: 18px 16px;
     border-bottom: 4px solid var(--accent); transition: background .2s;
   }
-  header .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .theme-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-top: 12px; }
+  .theme-label { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .9; }
   .theme-btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .theme-btns button { border: 1.5px solid rgba(255,255,255,.85); background: rgba(0,0,0,.18); color: #fff; padding: 7px 12px; border-radius: 8px; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
   .theme-btns button:hover { background: rgba(0,0,0,.32); }
@@ -47,6 +48,14 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
   .card h2 { margin: 0 0 12px; font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .card + .card { margin-top: 16px; }
+  .section > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -18px; padding: 18px; border-radius: 12px; }
+  .section > summary::-webkit-details-marker { display: none; }
+  .section > summary h2 { margin: 0; }
+  .section > summary::after { content: ''; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+  .section:not([open]) > summary::after { transform: rotate(-45deg); }
+  .section > summary:hover h2 { color: var(--ink); }
+  .section > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+  .section[open] > summary { margin-bottom: -4px; }
   label { display: block; font-weight: 600; margin: 12px 0 5px; font-size: .9rem; }
   label:first-of-type { margin-top: 0; }
   input[type=text], input[type=url], input[type=email], input[type=tel], input[type=password], textarea, select {
@@ -88,7 +97,10 @@
   .preview { position: sticky; top: 16px; text-align: center; }
   #qr { display: inline-block; background: repeating-conic-gradient(#e9e6e2 0 25%, #fff 0 50%) 50% / 16px 16px; border-radius: 10px; padding: 0; line-height: 0; max-width: 100%; }
   #qr canvas, #qr svg { max-width: 100%; height: auto; border-radius: 6px; }
-  .downloads { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .downloads { display: flex; gap: 8px 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+  .dl-label { font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .dl-btns { display: flex; gap: 8px; }
+  .dl-btns .btn { min-width: 64px; }
   .btn { border: none; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; background: var(--brand); color: #fff; }
   .btn:hover { filter: brightness(.9); }
   .btn.alt { background: var(--accent); }
@@ -101,21 +113,19 @@
 <body>
 <header>
   <div class="wrap">
-    <div>
-      <h1 id="title">QR Code Maker</h1>
-      <p id="tagline">Custom QR codes with your logo in the centre</p>
-    </div>
-    <div class="theme-btns">
-      <button data-theme-load="glenavy" aria-pressed="false">Load Glenavy Theme</button>
-      <button data-theme-load="default" aria-pressed="false">Plain theme</button>
+    <h1>QR Code Maker</h1>
+    <p>Custom QR codes with your logo in the centre</p>
+    <div class="theme-bar">
+      <span class="theme-label" id="theme-label">Theme</span>
+      <div class="theme-btns" id="theme-btns" role="group" aria-labelledby="theme-label"></div>
     </div>
   </div>
 </header>
 
 <main class="wrap">
   <section>
-    <div class="card">
-      <h2>1 · What should it link to?</h2>
+    <details class="card section" data-section="content" open>
+      <summary><h2>1 · What should it link to?</h2></summary>
       <div class="tabs" role="tablist">
         <button role="tab" data-type="url" aria-selected="true">Website</button>
         <button role="tab" data-type="text" aria-selected="false">Text</button>
@@ -150,10 +160,10 @@
         <label for="f-wsec">Security</label>
         <select id="f-wsec"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">None</option></select>
       </div>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>2 · Logo / crest</h2>
+    <details class="card section" data-section="logo" open>
+      <summary><h2>2 · Logo / crest</h2></summary>
       <input id="logo-file" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden>
       <div class="logo-row">
         <div class="logo-drop" id="logo-drop" tabindex="0" role="button" aria-label="Upload logo">
@@ -171,10 +181,10 @@
       <label for="logo-margin">Space around logo <span class="range-val" id="logo-margin-val"></span></label>
       <input id="logo-margin" type="range" min="0" max="20" step="1" value="6">
       <label class="check"><input type="checkbox" id="logo-clear" checked> Clear dots behind logo</label>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>3 · Style</h2>
+    <details class="card section" data-section="style" open>
+      <summary><h2>3 · Style</h2></summary>
       <div class="row">
         <div>
           <label for="c-dots">QR colour</label>
@@ -223,16 +233,19 @@
           </select>
         </div>
       </div>
-    </div>
+    </details>
   </section>
 
   <aside class="card preview">
     <h2>Preview</h2>
     <div id="qr"></div>
     <div class="downloads">
-      <button class="btn" data-dl="png">Download PNG</button>
-      <button class="btn alt" data-dl="svg">SVG</button>
-      <button class="btn alt" data-dl="jpeg">JPG</button>
+      <span class="dl-label" id="dl-label">Download</span>
+      <div class="dl-btns" role="group" aria-labelledby="dl-label">
+        <button class="btn" data-dl="png" title="Best for most uses">PNG</button>
+        <button class="btn alt" data-dl="svg" title="Best for printers and large signs">SVG</button>
+        <button class="btn alt" data-dl="jpeg">JPG</button>
+      </div>
     </div>
     <div class="warn hidden" id="contrast-warn"></div>
     <p class="hint">Always test-scan with a couple of phones before printing. Uses the highest error correction (H), so the crest can cover the centre safely.</p>
@@ -523,9 +536,6 @@
     const root = document.documentElement.style;
     root.setProperty('--brand', t.brand);
     root.setProperty('--accent', t.accent || '#111111');
-    $('title').textContent = theme === 'default' ? t.name : t.name + ' · QR Maker';
-    $('tagline').textContent = t.tagline || '';
-    document.title = theme === 'default' ? 'Club QR Maker' : t.name + ' QR Maker';
     setColour('c-dots', t.brand);
     setColour('c-eyes', t.eyes || t.brand);
     setColour('c-bg', t.background || '#FFFFFF');
@@ -547,8 +557,26 @@
     }).catch(() => console.warn('Could not load theme logo: ' + url));
   }
 
-  document.querySelectorAll('[data-theme-load]').forEach(b =>
-    b.addEventListener('click', () => applyTheme(b.dataset.themeLoad, true)));
+  // One button per entry in themes.js
+  Object.entries(THEMES).forEach(([key, t]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.themeLoad = key;
+    b.textContent = t.label || key;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => applyTheme(key, true));
+    $('theme-btns').appendChild(b);
+  });
+
+  // Remember which sections are collapsed on this device
+  let closed = [];
+  try { closed = JSON.parse(store.get('qr-closed') || '[]'); } catch (e) {}
+  document.querySelectorAll('details.section').forEach(d => {
+    if (closed.includes(d.dataset.section)) d.open = false;
+    d.addEventListener('toggle', () => {
+      store.set('qr-closed', JSON.stringify([...document.querySelectorAll('details.section:not([open])')].map(x => x.dataset.section)));
+    });
+  });
 
   setLogoUI();
   applyTheme(theme, false);

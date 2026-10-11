@@ -1,4 +1,6 @@
-// Club themes. Add a new club by copying an entry below.
+// Club themes. Each entry gets its own button under the page title.
+// Add a new club by copying an entry below.
+//   label  - text on the theme button
 //   brand  - main club colour, used for the QR dots and the page header
 //   eyes   - colour of the three corner squares
 //   accent - secondary club colour, used for the header stripe and dark buttons
@@ -7,8 +9,7 @@
 //            leave as null to upload one in the app instead
 window.QR_THEMES = {
   default: {
-    name: 'QR Code Maker',
-    tagline: 'Custom QR codes with your logo in the centre',
+    label: 'Plain',
     brand: '#2563EB',
     eyes: '#2563EB',
     accent: '#111111',
@@ -19,8 +20,7 @@ window.QR_THEMES = {
     fileName: 'qr-code'
   },
   glenavy: {
-    name: "St Joseph's GAC Glenavy",
-    tagline: 'Club-branded QR codes with the crest in the centre',
+    label: "St Joseph's GAC Glenavy",
     brand: '#F58A1F',
     eyes: '#F58A1F',
     accent: '#111111',
