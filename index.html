@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glenavy QR Maker</title>
+<script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+<style>
+  :root {
+    --club: #F58A1F;
+    --club-dark: #c96a0c;
+    --ink: #1d1d1f;
+    --muted: #6b6b70;
+    --bg: #f6f4f1;
+    --card: #ffffff;
+    --line: #e4e0da;
+    --warn-bg: #fff4e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #f2f2f2; --muted: #a8a8ad; --bg: #161514; --card: #22201e; --line: #3a3632; --warn-bg: #3a2a18;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f2f2f2; --muted: #a8a8ad; --bg: #161514; --card: #22201e; --line: #3a3632; --warn-bg: #3a2a18;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--club); color: #fff; padding: 18px 16px;
+    border-bottom: 4px solid #111;
+  }
+  header .wrap { display: flex; align-items: center; gap: 12px; }
+  header h1 { margin: 0; font-size: 1.35rem; letter-spacing: .01em; }
+  header p { margin: 2px 0 0; opacity: .92; font-size: .9rem; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  main.wrap { padding: 20px 16px 40px; display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 820px) { main.wrap { grid-template-columns: 1.1fr .9fr; align-items: start; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .card + .card { margin-top: 16px; }
+  label { display: block; font-weight: 600; margin: 12px 0 5px; font-size: .9rem; }
+  label:first-of-type { margin-top: 0; }
+  input[type=text], input[type=url], input[type=email], input[type=tel], input[type=password], textarea, select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font: inherit;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--club); outline-offset: 1px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .tabs button {
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+    padding: 7px 12px; border-radius: 999px; cursor: pointer; font: inherit; font-size: .88rem;
+  }
+  .tabs button[aria-selected=true] { background: var(--club); border-color: var(--club); color: #fff; font-weight: 600; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .colour { display: flex; gap: 8px; align-items: center; }
+  .colour input[type=color] { width: 44px; height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--card); cursor: pointer; }
+  .colour input[type=text] { flex: 1; font-family: ui-monospace, Consolas, monospace; }
+  .linkbtn { background: none; border: none; color: var(--club-dark); cursor: pointer; font: inherit; font-size: .82rem; padding: 0; text-decoration: underline; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .linkbtn { color: var(--club); } }
+  input[type=range] { width: 100%; accent-color: var(--club); }
+  .range-val { float: right; font-weight: 400; color: var(--muted); }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 500; margin-top: 12px; }
+  .check input { accent-color: var(--club); width: 17px; height: 17px; }
+  .logo-drop {
+    border: 2px dashed var(--line); border-radius: 10px; padding: 14px; display: flex; gap: 14px; align-items: center;
+    cursor: pointer; transition: border-color .15s;
+  }
+  .logo-drop:hover, .logo-drop.over { border-color: var(--club); }
+  .logo-drop img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: #fff; border: 1px solid var(--line); }
+  .logo-drop small { color: var(--muted); display: block; }
+  .preview { position: sticky; top: 16px; text-align: center; }
+  #qr { display: inline-block; background: repeating-conic-gradient(#e9e6e2 0 25%, #fff 0 50%) 50% / 16px 16px; border-radius: 10px; padding: 0; line-height: 0; max-width: 100%; }
+  #qr canvas, #qr svg { max-width: 100%; height: auto; border-radius: 6px; }
+  .downloads { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .btn { border: none; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; background: var(--club); color: #fff; }
+  .btn:hover { background: var(--club-dark); }
+  .btn.alt { background: #111; }
+  .btn.alt:hover { background: #333; }
+  .warn { background: var(--warn-bg); border-left: 4px solid var(--club); padding: 10px 12px; border-radius: 6px; font-size: .86rem; text-align: left; margin-top: 14px; }
+  .hint { color: var(--muted); font-size: .82rem; margin-top: 10px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>St Joseph's GAC Glenavy · QR Maker</h1>
+      <p>Club-branded QR codes with the crest in the centre</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <div class="card">
+      <h2>1 · What should it link to?</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-type="url" aria-selected="true">Website</button>
+        <button role="tab" data-type="text" aria-selected="false">Text</button>
+        <button role="tab" data-type="email" aria-selected="false">Email</button>
+        <button role="tab" data-type="tel" aria-selected="false">Phone</button>
+        <button role="tab" data-type="wifi" aria-selected="false">Wi‑Fi</button>
+      </div>
+
+      <div data-panel="url">
+        <label for="f-url">Web address</label>
+        <input id="f-url" type="url" placeholder="https://..." value="https://">
+      </div>
+      <div data-panel="text" class="hidden">
+        <label for="f-text">Text</label>
+        <textarea id="f-text" placeholder="Any message, e.g. lotto numbers, fixture details..."></textarea>
+      </div>
+      <div data-panel="email" class="hidden">
+        <label for="f-email">Email address</label>
+        <input id="f-email" type="email" placeholder="secretary@example.com">
+        <label for="f-subject">Subject (optional)</label>
+        <input id="f-subject" type="text">
+      </div>
+      <div data-panel="tel" class="hidden">
+        <label for="f-tel">Phone number</label>
+        <input id="f-tel" type="tel" placeholder="+44 28 ...">
+      </div>
+      <div data-panel="wifi" class="hidden">
+        <label for="f-ssid">Network name (SSID)</label>
+        <input id="f-ssid" type="text">
+        <label for="f-wpass">Password</label>
+        <input id="f-wpass" type="password" autocomplete="off">
+        <label for="f-wsec">Security</label>
+        <select id="f-wsec"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">None</option></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 · Club crest</h2>
+      <input id="logo-file" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" hidden>
+      <div class="logo-drop" id="logo-drop" tabindex="0" role="button" aria-label="Upload logo">
+        <img id="logo-thumb" alt="">
+        <div>
+          <strong id="logo-label">Upload the club crest</strong>
+          <small>Click or drop a PNG / SVG. A transparent background works best. It's remembered on this device.</small>
+        </div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:14px;">
+        <button class="linkbtn" id="logo-remove">Remove logo</button>
+      </div>
+      <label for="logo-size">Logo size <span class="range-val" id="logo-size-val"></span></label>
+      <input id="logo-size" type="range" min="0.15" max="0.4" step="0.01" value="0.3">
+      <label for="logo-margin">Space around logo <span class="range-val" id="logo-margin-val"></span></label>
+      <input id="logo-margin" type="range" min="0" max="20" step="1" value="6">
+      <label class="check"><input type="checkbox" id="logo-clear" checked> Clear dots behind logo</label>
+    </div>
+
+    <div class="card">
+      <h2>3 · Style</h2>
+      <div class="row">
+        <div>
+          <label for="c-dots">QR colour</label>
+          <div class="colour"><input type="color" id="c-dots-pick" value="#F58A1F"><input type="text" id="c-dots" value="#F58A1F" maxlength="7"></div>
+          <button class="linkbtn" data-reset="c-dots">Reset to club orange</button>
+        </div>
+        <div>
+          <label for="c-eyes">Corner squares</label>
+          <div class="colour"><input type="color" id="c-eyes-pick" value="#F58A1F"><input type="text" id="c-eyes" value="#F58A1F" maxlength="7"></div>
+          <button class="linkbtn" data-reset="c-eyes">Reset to club orange</button>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="c-bg">Background</label>
+          <div class="colour"><input type="color" id="c-bg-pick" value="#FFFFFF"><input type="text" id="c-bg" value="#FFFFFF" maxlength="7"></div>
+        </div>
+        <div>
+          <label for="size">Download size</label>
+          <select id="size">
+            <option value="512">512 px (web / social)</option>
+            <option value="1024" selected>1024 px (posters)</option>
+            <option value="2048">2048 px (large print)</option>
+          </select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="bg-transparent"> Transparent background</label>
+      <div class="row">
+        <div>
+          <label for="dot-style">Dot shape</label>
+          <select id="dot-style">
+            <option value="square">Square</option>
+            <option value="rounded" selected>Rounded</option>
+            <option value="dots">Dots</option>
+            <option value="classy">Classy</option>
+            <option value="classy-rounded">Classy rounded</option>
+            <option value="extra-rounded">Extra rounded</option>
+          </select>
+        </div>
+        <div>
+          <label for="eye-style">Corner shape</label>
+          <select id="eye-style">
+            <option value="square">Square</option>
+            <option value="extra-rounded" selected>Rounded</option>
+            <option value="dot">Circle</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="card preview">
+    <h2>Preview</h2>
+    <div id="qr"></div>
+    <div class="downloads">
+      <button class="btn" data-dl="png">Download PNG</button>
+      <button class="btn alt" data-dl="svg">SVG</button>
+      <button class="btn alt" data-dl="jpeg">JPG</button>
+    </div>
+    <div class="warn hidden" id="contrast-warn"></div>
+    <p class="hint">Always test-scan with a couple of phones before printing. Uses the highest error correction (H), so the crest can cover the centre safely.</p>
+  </aside>
+</main>
+
+<script>
+(function () {
+  const CLUB = '#F58A1F';
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+
+  let type = 'url';
+  let logo = store.get('sjg-logo') || '';
+
+  const PREVIEW = 300;
+  const qr = new QRCodeStyling({
+    width: PREVIEW, height: PREVIEW, type: 'canvas', margin: 10,
+    qrOptions: { errorCorrectionLevel: 'H' },
+    data: 'https://'
+  });
+  qr.append($('qr'));
+
+  function data() {
+    switch (type) {
+      case 'url': return $('f-url').value.trim() || ' ';
+      case 'text': return $('f-text').value || ' ';
+      case 'email': {
+        const s = $('f-subject').value.trim();
+        return 'mailto:' + $('f-email').value.trim() + (s ? '?subject=' + encodeURIComponent(s) : '');
+      }
+      case 'tel': return 'tel:' + $('f-tel').value.replace(/\s+/g, '');
+      case 'wifi': {
+        const esc = s => s.replace(/([\\;,:"])/g, '\\$1');
+        const sec = $('f-wsec').value;
+        return `WIFI:T:${sec};S:${esc($('f-ssid').value)};` + (sec === 'nopass' ? '' : `P:${esc($('f-wpass').value)};`) + ';';
+      }
+    }
+  }
+
+  const validHex = v => /^#[0-9a-f]{6}$/i.test(v);
+  const hexVal = (id, fallback) => validHex($(id).value) ? $(id).value : fallback;
+
+  function options(size) {
+    const transparent = $('bg-transparent').checked;
+    const eyes = hexVal('c-eyes', CLUB);
+    return {
+      width: size, height: size,
+      margin: Math.round(size * 0.035),
+      data: data(),
+      image: logo || undefined,
+      qrOptions: { errorCorrectionLevel: 'H' },
+      dotsOptions: { color: hexVal('c-dots', CLUB), type: $('dot-style').value },
+      cornersSquareOptions: { color: eyes, type: $('eye-style').value },
+      cornersDotOptions: { color: eyes, type: $('eye-style').value === 'square' ? 'square' : 'dot' },
+      backgroundOptions: { color: transparent ? 'transparent' : hexVal('c-bg', '#FFFFFF') },
+      imageOptions: {
+        crossOrigin: 'anonymous',
+        imageSize: parseFloat($('logo-size').value),
+        margin: parseInt($('logo-margin').value, 10),
+        hideBackgroundDots: $('logo-clear').checked
+      }
+    };
+  }
+
+  // Relative luminance contrast check (WCAG formula) between dots and background.
+  function lum(hex) {
+    const c = [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16) / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function checkContrast() {
+    const fg = hexVal('c-dots', CLUB);
+    const bg = $('bg-transparent').checked ? '#FFFFFF' : hexVal('c-bg', '#FFFFFF');
+    const [a, b] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+    const ratio = (a + 0.05) / (b + 0.05);
+    const w = $('contrast-warn');
+    let msg = '';
+    if (lum(fg) > lum(bg)) msg = 'The QR colour is lighter than the background. Many scanners need dark dots on a light background.';
+    else if (ratio < 2.2) msg = `Low contrast (${ratio.toFixed(1)}:1). This may not scan reliably; try a darker QR colour or lighter background.`;
+    if ($('bg-transparent').checked) msg += (msg ? ' ' : '') + 'Transparent background: make sure it is placed on a light surface.';
+    w.textContent = msg;
+    w.classList.toggle('hidden', !msg);
+  }
+
+  let t;
+  function render() {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      qr.update(options(PREVIEW));
+      checkContrast();
+    }, 80);
+    $('logo-size-val').textContent = Math.round($('logo-size').value * 100) + '%';
+    $('logo-margin-val').textContent = $('logo-margin').value + ' px';
+  }
+
+  function setLogoUI() {
+    $('logo-thumb').src = logo || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56"><rect width="56" height="56" fill="#fff"/><path d="M28 16v24M16 28h24" stroke="#F58A1F" stroke-width="4" stroke-linecap="round"/></svg>');
+    $('logo-label').textContent = logo ? 'Crest loaded — click to change' : 'Upload the club crest';
+    $('logo-remove').classList.toggle('hidden', !logo);
+  }
+
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const r = new FileReader();
+    r.onload = () => {
+      logo = r.result;
+      if (!store.set('sjg-logo', logo)) console.warn('Logo too large to remember on this device; it will still work this session.');
+      setLogoUI(); render();
+    };
+    r.readAsDataURL(file);
+  }
+
+  // Tabs
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    type = b.dataset.type;
+    document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== type));
+    render();
+  }));
+
+  // Colour pickers kept in sync with hex text fields
+  ['c-dots', 'c-eyes', 'c-bg'].forEach(id => {
+    const pick = $(id + '-pick'), txt = $(id);
+    pick.addEventListener('input', () => { txt.value = pick.value.toUpperCase(); render(); });
+    txt.addEventListener('input', () => {
+      let v = txt.value.trim(); if (v && v[0] !== '#') v = '#' + v;
+      if (validHex(v)) pick.value = v;
+      render();
+    });
+  });
+  document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.reset; $(id).value = CLUB; $(id + '-pick').value = CLUB; render();
+  }));
+
+  // Logo upload
+  const drop = $('logo-drop');
+  drop.addEventListener('click', () => $('logo-file').click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('logo-file').click(); } });
+  $('logo-file').addEventListener('change', e => loadFile(e.target.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); loadFile(e.dataTransfer.files[0]); });
+  $('logo-remove').addEventListener('click', () => { logo = ''; store.del('sjg-logo'); $('logo-file').value = ''; setLogoUI(); render(); });
+
+  document.querySelectorAll('input, textarea, select').forEach(el => {
+    if (el.type !== 'file' && el.type !== 'color') el.addEventListener('input', render);
+  });
+
+  // Downloads at full size
+  document.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', () => {
+    const size = parseInt($('size').value, 10);
+    const ext = b.dataset.dl;
+    const opts = options(size);
+    if (ext === 'jpeg' && opts.backgroundOptions.color === 'transparent') opts.backgroundOptions.color = '#FFFFFF';
+    const big = new QRCodeStyling({ ...opts, type: ext === 'svg' ? 'svg' : 'canvas' });
+    big.download({ name: 'glenavy-qr', extension: ext });
+  }));
+
+  setLogoUI();
+  render();
+})();
+</script>
+</body>
+</html>
