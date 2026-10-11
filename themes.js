@@ -2,6 +2,7 @@
 //   brand  - main club colour, used for the QR dots and the page header
 //   eyes   - colour of the three corner squares
 //   accent - secondary club colour, used for the header stripe and dark buttons
+//   logoSize - share of the QR the logo may take up (0.15-0.4)
 //   logo   - optional path to a crest image in this repo (e.g. 'logos/glenavy.png');
 //            leave as null to upload one in the app instead
 window.QR_THEMES = {
@@ -26,7 +27,8 @@ window.QR_THEMES = {
     background: '#FFFFFF',
     dotStyle: 'rounded',
     eyeStyle: 'extra-rounded',
-    logo: null,
+    logoSize: 0.4,
+    logo: 'logos/glenavy.png',
     fileName: 'glenavy-qr'
   }
 };

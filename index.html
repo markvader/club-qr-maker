@@ -288,7 +288,8 @@
       imageOptions: {
         crossOrigin: 'anonymous',
         imageSize: parseFloat($('logo-size').value),
-        margin: parseInt($('logo-margin').value, 10),
+        // Slider is in preview pixels; scale so downloads match the preview.
+        margin: Math.round(parseInt($('logo-margin').value, 10) * size / PREVIEW),
         hideBackgroundDots: $('logo-clear').checked
       }
     };
@@ -408,6 +409,7 @@
     $('bg-transparent').checked = false;
     $('dot-style').value = t.dotStyle || 'rounded';
     $('eye-style').value = t.eyeStyle || 'extra-rounded';
+    $('logo-size').value = t.logoSize || 0.3;
     document.querySelectorAll('[data-theme-load]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeLoad === theme));
     if (withLogo && t.logo) loadLogoUrl(t.logo);
     render();
