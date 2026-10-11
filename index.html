@@ -93,6 +93,7 @@
   .btn:hover { filter: brightness(.9); }
   .btn.alt { background: var(--accent); }
   .warn { background: var(--warn-bg); border-left: 4px solid var(--brand); padding: 10px 12px; border-radius: 6px; font-size: .86rem; text-align: left; margin-top: 14px; }
+  #logo-res { margin: -4px 0 16px; }
   .hint { color: var(--muted); font-size: .82rem; margin-top: 10px; }
   .hidden { display: none; }
 </style>
@@ -164,6 +165,7 @@
         </div>
         <button class="clear-btn" id="logo-remove" title="Clear the loaded image">✕ Clear image</button>
       </div>
+      <div class="warn hidden" id="logo-res" role="status"></div>
       <label for="logo-size">Logo size <span class="range-val" id="logo-size-val"></span></label>
       <input id="logo-size" type="range" min="0.15" max="0.4" step="0.01" value="0.3">
       <label for="logo-margin">Space around logo <span class="range-val" id="logo-margin-val"></span></label>
@@ -329,6 +331,7 @@
     t = setTimeout(() => {
       qr.update(options(PREVIEW));
       checkContrast();
+      checkLogoRes();
     }, 80);
     $('logo-size-val').textContent = Math.round($('logo-size').value * 100) + '%';
     $('logo-margin-val').textContent = $('logo-margin').value + ' px';
@@ -338,6 +341,46 @@
     $('logo-thumb').src = logo || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56"><rect width="56" height="56" fill="#fff"/><path d="M28 16v24M16 28h24" stroke="#9CA3AF" stroke-width="4" stroke-linecap="round"/></svg>');
     $('logo-label').textContent = logo ? 'Logo loaded — click to change' : 'Upload a logo';
     $('logo-remove').classList.toggle('hidden', !logo);
+    measureLogo();
+  }
+
+  // Logo resolution check. At error level H the logo may cover about
+  // imageSize x 30% of the code's area, so estimate how much the source
+  // image is enlarged at the chosen download size. SVGs scale freely.
+  let logoDims = null;
+  function measureLogo() {
+    logoDims = null;
+    checkLogoRes();
+    if (!logo || /^data:image\/svg/.test(logo)) return;
+    const img = new Image();
+    const src = logo;
+    img.onload = () => {
+      if (src !== logo) return;
+      logoDims = { w: img.naturalWidth, h: img.naturalHeight };
+      checkLogoRes();
+    };
+    img.src = src;
+  }
+  const enlargement = size =>
+    size * Math.sqrt(parseFloat($('logo-size').value) * 0.3 / (logoDims.w * logoDims.h));
+
+  function checkLogoRes() {
+    const el = $('logo-res');
+    let msg = '';
+    if (logoDims) {
+      const size = parseInt($('size').value, 10);
+      const x = enlargement(size);
+      if (x > 1.25) {
+        const { w, h } = logoDims;
+        const sharpUpTo = [2048, 1024, 512].find(n => enlargement(n) <= 1.25);
+        msg = (x > 2 ? 'Low-resolution logo: ' : 'Logo may look slightly soft: ') +
+          `it's ${w} × ${h} px, so it gets enlarged about ${x.toFixed(1)}× in a ${size} px download.` +
+          (sharpUpTo ? ` It stays sharp up to ${sharpUpTo} px downloads.` : '') +
+          ` For a crisp result use an image at least ${Math.ceil(Math.max(w, h) * x)} px on its longest side, or an SVG.`;
+      }
+    }
+    el.textContent = msg;
+    el.classList.toggle('hidden', !msg);
   }
 
   function loadFile(file) {
