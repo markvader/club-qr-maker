@@ -93,7 +93,7 @@
   .btn:hover { filter: brightness(.9); }
   .btn.alt { background: var(--accent); }
   .warn { background: var(--warn-bg); border-left: 4px solid var(--brand); padding: 10px 12px; border-radius: 6px; font-size: .86rem; text-align: left; margin-top: 14px; }
-  #logo-res { margin: -4px 0 16px; }
+  #logo-res { margin: -4px 0 16px; white-space: pre-line; }
   .hint { color: var(--muted); font-size: .82rem; margin-top: 10px; }
   .hidden { display: none; }
 </style>
@@ -282,14 +282,16 @@
   const validHex = v => /^#[0-9a-f]{6}$/i.test(v);
   const hexVal = (id, fallback) => validHex($(id).value) ? $(id).value : fallback;
 
+  const qrMargin = size => Math.round(size * 0.035);
+
   function options(size) {
     const transparent = $('bg-transparent').checked;
     const eyes = hexVal('c-eyes', T().eyes);
     return {
       width: size, height: size,
-      margin: Math.round(size * 0.035),
+      margin: qrMargin(size),
       data: data(),
-      image: logo || undefined,
+      image: paddedLogo || undefined,
       qrOptions: { errorCorrectionLevel: 'H' },
       dotsOptions: { color: hexVal('c-dots', T().brand), type: $('dot-style').value },
       cornersSquareOptions: { color: eyes, type: $('eye-style').value },
@@ -298,8 +300,7 @@
       imageOptions: {
         crossOrigin: 'anonymous',
         imageSize: parseFloat($('logo-size').value),
-        // Slider is in preview pixels; scale so downloads match the preview.
-        margin: Math.round(parseInt($('logo-margin').value, 10) * size / PREVIEW),
+        margin: 0, // the gap is baked into paddedLogo, see padLogo()
         hideBackgroundDots: $('logo-clear').checked
       }
     };
@@ -329,12 +330,13 @@
   function render() {
     clearTimeout(t);
     t = setTimeout(() => {
+      padLogo();
       qr.update(options(PREVIEW));
       checkContrast();
       checkLogoRes();
     }, 80);
     $('logo-size-val').textContent = Math.round($('logo-size').value * 100) + '%';
-    $('logo-margin-val').textContent = $('logo-margin').value + ' px';
+    $('logo-margin-val').textContent = $('logo-margin').value + '%';
   }
 
   function setLogoUI() {
@@ -344,43 +346,113 @@
     measureLogo();
   }
 
-  // Logo resolution check. At error level H the logo may cover about
-  // imageSize x 30% of the code's area, so estimate how much the source
-  // image is enlarged at the chosen download size. SVGs scale freely.
-  let logoDims = null;
+  // The library takes its image margin off the logo's width and height
+  // equally, which squashes any logo that isn't square. Instead we pad the
+  // logo with a transparent border (so the shape is kept) and pass margin 0.
+  let logoInfo = null;               // { img, w, h, svg } for the loaded logo
+  let paddedLogo = '', padDims = null;
+
+  function svgSize(src) {
+    const body = src.slice(src.indexOf(',') + 1);
+    let text = '';
+    try { text = /;base64,/.test(src) ? atob(body) : decodeURIComponent(body); } catch (e) { return null; }
+    const vb = text.match(/viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+    if (vb) return [parseFloat(vb[1]), parseFloat(vb[2])];
+    const w = text.match(/<svg[^>]*\swidth\s*=\s*["']([\d.]+)/i), h = text.match(/<svg[^>]*\sheight\s*=\s*["']([\d.]+)/i);
+    return w && h ? [parseFloat(w[1]), parseFloat(h[1])] : null;
+  }
+
   function measureLogo() {
-    logoDims = null;
+    logoInfo = null; paddedLogo = ''; padDims = null;
     checkLogoRes();
-    if (!logo || /^data:image\/svg/.test(logo)) return;
+    if (!logo) return;
+    const src = logo, svg = /^data:image\/svg/.test(src);
     const img = new Image();
-    const src = logo;
     img.onload = () => {
       if (src !== logo) return;
-      logoDims = { w: img.naturalWidth, h: img.naturalHeight };
-      checkLogoRes();
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const vb = svg && svgSize(src);
+      if (vb) [w, h] = vb;
+      if (!w || !h) w = h = 300;
+      logoInfo = { img, w, h, svg };
+      render();
     };
     img.src = src;
   }
-  const enlargement = size =>
-    size * Math.sqrt(parseFloat($('logo-size').value) * 0.3 / (logoDims.w * logoDims.h));
+
+  function padLogo() {
+    const pct = parseInt($('logo-margin').value, 10) / 100;
+    if (!logoInfo) { paddedLogo = ''; padDims = null; return; }
+    if (padDims && padDims.pct === pct && padDims.info === logoInfo) return;
+    const { img, w, h, svg } = logoInfo;
+    // Border is a share of the logo's overall size, so it looks the same
+    // in the preview and every download size.
+    let b = pct * Math.sqrt(w * h);
+    if (!svg) b = Math.round(b);
+    const pw = w + 2 * b, ph = h + 2 * b;
+    if (svg) {
+      paddedLogo = 'data:image/svg+xml,' + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${pw}" height="${ph}" viewBox="0 0 ${pw} ${ph}">` +
+        `<image x="${b}" y="${b}" width="${w}" height="${h}" href="${logo}" xlink:href="${logo}"/></svg>`);
+    } else {
+      const c = document.createElement('canvas');
+      c.width = pw; c.height = ph;
+      c.getContext('2d').drawImage(img, b, b, w, h);
+      paddedLogo = c.toDataURL('image/png');
+    }
+    padDims = { pct, info: logoInfo, w: pw, h: ph };
+  }
+
+  // Mirrors calculateImageSize() in qr-code-styling 1.5 so the checks below
+  // use the real drawn size. Returns the logo box and QR width in pixels.
+  function logoBox(size, count) {
+    const dotSize = Math.floor((size - 2 * qrMargin(size)) / count);
+    const maxHiddenDots = Math.floor(parseFloat($('logo-size').value) * 0.3 * count * count);
+    const maxAxis = count - 14;
+    const k = padDims.h / padDims.w;
+    let hx = Math.floor(Math.sqrt(maxHiddenDots / k));
+    if (hx <= 0) hx = 1;
+    if (maxAxis < hx) hx = maxAxis;
+    if (hx % 2 === 0) hx--;
+    let x = hx * dotSize;
+    let hy = 1 + 2 * Math.ceil((hx * k - 1) / 2);
+    let y = Math.round(x * k);
+    if (hy * hx > maxHiddenDots || maxAxis < hy) {
+      if (maxAxis < hy) { hy = maxAxis; if (hy % 2 === 0) hx--; } else { hy -= 2; }
+      y = hy * dotSize;
+      hx = 1 + 2 * Math.ceil((hy / k - 1) / 2);
+      x = Math.round(y / k);
+    }
+    return { w: x, h: y, qr: count * dotSize };
+  }
 
   function checkLogoRes() {
     const el = $('logo-res');
-    let msg = '';
-    if (logoDims) {
+    const notes = [];
+    const count = qr._qr && qr._qr.getModuleCount();
+    if (logoInfo && padDims && padDims.info === logoInfo && count) {
+      const { w, h, svg } = logoInfo;
       const size = parseInt($('size').value, 10);
+      const enlargement = n => logoBox(n, count).w / padDims.w;
       const x = enlargement(size);
-      if (x > 1.25) {
-        const { w, h } = logoDims;
+      if (!svg && x > 1.25) {
         const sharpUpTo = [2048, 1024, 512].find(n => enlargement(n) <= 1.25);
-        msg = (x > 2 ? 'Low-resolution logo: ' : 'Logo may look slightly soft: ') +
+        notes.push((x > 2 ? 'Low-resolution logo: ' : 'Logo may look slightly soft: ') +
           `it's ${w} × ${h} px, so it gets enlarged about ${x.toFixed(1)}× in a ${size} px download.` +
           (sharpUpTo ? ` It stays sharp up to ${sharpUpTo} px downloads.` : '') +
-          ` For a crisp result use an image at least ${Math.ceil(Math.max(w, h) * x)} px on its longest side, or an SVG.`;
+          ` For a crisp result use an image at least ${Math.ceil(Math.max(w, h) * x)} px on its longest side, or an SVG.`);
+      }
+      const ratio = Math.max(w / h, h / w);
+      if (ratio >= 2.5) {
+        const box = logoBox(size, count), wide = w > h;
+        const thin = Math.round(100 * (wide ? box.h * h / padDims.h : box.w * w / padDims.w) / box.qr);
+        notes.push(`This logo is very ${wide ? 'wide' : 'tall'} (${ratio.toFixed(1)}:1). The logo can't reach the corner squares, ` +
+          `so it shows as a thin strip about ${thin}% of the code's ${wide ? 'height' : 'width'}. ` +
+          `A square or stacked version of the logo will appear much bigger.`);
       }
     }
-    el.textContent = msg;
-    el.classList.toggle('hidden', !msg);
+    el.textContent = notes.join('\n\n');
+    el.classList.toggle('hidden', !notes.length);
   }
 
   function loadFile(file) {
