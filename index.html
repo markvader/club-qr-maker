@@ -533,6 +533,10 @@
     theme = THEMES[key] ? key : 'default';
     const t = T();
     store.set('qr-theme', theme);
+    // Keep the address bar in step, so copying it shares the theme.
+    const url = new URL(location.href);
+    if (theme === 'default') url.searchParams.delete('theme'); else url.searchParams.set('theme', theme);
+    history.replaceState(null, '', url);
     const root = document.documentElement.style;
     root.setProperty('--brand', t.brand);
     root.setProperty('--accent', t.accent || '#111111');
@@ -579,7 +583,11 @@
   });
 
   setLogoUI();
-  applyTheme(theme, false);
+  // A link like ?theme=glenavy opens straight into that theme, crest
+  // included, so a club can share its own link while Plain stays the default.
+  const linked = new URLSearchParams(location.search).get('theme');
+  if (THEMES[linked] && (linked !== theme || !logo)) applyTheme(linked, true);
+  else applyTheme(theme, false);
 })();
 </script>
 </body>
